@@ -1,61 +1,101 @@
 package in.strikes.crudSpringBootDemo.service;
 
-import in.strikes.crudSpringBootDemo.entity.Student;
-import in.strikes.crudSpringBootDemo.repository.StudentRepository;
-import lombok.AllArgsConstructor;
-import org.springframework.stereotype.Service;
 
+import in.strikes.crudSpringBootDemo.dto.StudentDto;
+import in.strikes.crudSpringBootDemo.dto.StudentGetDto;
+import in.strikes.crudSpringBootDemo.dto.UpdateStudent;
+import in.strikes.crudSpringBootDemo.entity.Student;
+import in.strikes.crudSpringBootDemo.exception.DuplicateResourceException;
+import in.strikes.crudSpringBootDemo.exception.ResourceNotFoundException;
+import in.strikes.crudSpringBootDemo.repository.StudentRepository;
+import lombok.RequiredArgsConstructor;
+import org.modelmapper.ModelMapper;
+import org.springframework.stereotype.Service;
 import java.util.List;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class StudentService {
 
     private  final StudentRepository studentRepository;
+    private final ModelMapper modelMapper;
 
     // Create New Student
-    public Student createStudent(Student student){
-          return studentRepository.save(student);
+    public StudentDto createStudent(StudentDto studentDto){
 
-    }
+         Student student = modelMapper.map(studentDto , Student.class);
+
+         if(EmailExist(student)){
+              throw new DuplicateResourceException(student.getEmail()+" Email Already Exist. Enter Another Email.");
+         }
+
+        student.setDeleted(false);
+        studentRepository.save(student);
+
+
+         return modelMapper.map(student , StudentDto.class);
+     }
 
     // Get Student By its id
-    public Student getStudent(Long id){
+    public StudentGetDto getStudent(Long id) {
 
-         Optional<Student>allStudent = studentRepository.findById(id);
-        return allStudent.orElse(null);
+          Student ReqStudent = studentRepository.findById(id).orElseThrow(
+                  () -> new RuntimeException("The student Not Found  With Id : "+id)
+          );
 
+          return modelMapper.map(ReqStudent , StudentGetDto.class);
     }
 
     // Get ALL Student
-    public List<Student> findAllStudent(){
-        return studentRepository.findAll();
+    public List<StudentGetDto> findAllStudent(){
+        List<Student>studentList = studentRepository.findAllByDeletedFalse();
+
+        return studentList.stream()
+                .map(student -> modelMapper.map(student , StudentGetDto.class))
+                .collect(Collectors.toList());
     }
 
     // Update Student
-    public Student updateStudent(Long id , Student updateStudent){
-        Student existingStudent = studentRepository.findById(id).orElseThrow(
-                () ->  new RuntimeException("Student Not Found"+ id)
+    public UpdateStudent updateStudent(Long id , UpdateStudent updateStudent){
+        Student existingStudent = studentRepository.findByIdAndDeletedFalse(id).orElseThrow(
+                () ->  new ResourceNotFoundException("You Can't Update , This Id :  "+ id+" Not Found.")
         );
 
         existingStudent.setName(updateStudent.getName());
         existingStudent.setEmail(updateStudent.getEmail());
-        existingStudent.setRoll_no(updateStudent.getRoll_no());
         existingStudent.setAge(updateStudent.getAge());
         existingStudent.setSubject(updateStudent.getSubject());
+        existingStudent.setDeleted(false);
 
-        return studentRepository.save(existingStudent);
+        studentRepository.save(existingStudent);
+
+        return modelMapper.map(existingStudent , UpdateStudent.class);
     }
 
     // Delete Student
-    public Boolean deleteStudent(Long id){
-         Boolean isStudent = studentRepository.existsById(id);
-
-         if(!isStudent) return false;
+    public void deleteStudent(Long id){
+         Student student = studentRepository.findById(id).orElseThrow(
+                 () -> new ResourceNotFoundException("This Id Not Found : "+id)
+         );
 
          studentRepository.deleteById(id);
 
-         return true;
     }
+
+    // Soft Delete
+    public void deleteStudentSoftly(Long id){
+
+        Student existingStudent = studentRepository.findByIdAndDeletedFalse(id).orElseThrow(
+                () -> new ResourceNotFoundException("Student Not Found With Id : "+ id)
+        );
+
+         existingStudent.setDeleted(true);
+         studentRepository.save(existingStudent);
+    }
+
+    private boolean EmailExist(Student student){
+        return studentRepository.existsByEmail(student.getEmail());
+    }
+
 }

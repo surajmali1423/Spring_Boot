@@ -23,10 +23,11 @@ public class Student {
     private String email;
 
     @Column(nullable = false)
-    private int age;
+    private Integer age;
 
     @Column(nullable = false , length = 80)
     private String subject;
 
-    private boolean is_delete;
+    @Column(nullable = false)
+    private boolean deleted;
 }

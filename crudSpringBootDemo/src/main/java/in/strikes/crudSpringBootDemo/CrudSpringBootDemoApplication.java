@@ -2,7 +2,6 @@ package in.strikes.crudSpringBootDemo;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
 
 @SpringBootApplication
 public class CrudSpringBootDemoApplication {
@@ -11,5 +10,4 @@ public class CrudSpringBootDemoApplication {
 		SpringApplication.run(CrudSpringBootDemoApplication.class, args);
 		System.out.println("Hello Bhai Log");
 	}
-
 }
